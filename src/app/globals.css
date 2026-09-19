@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+:root {
+  /* Warm deck paper + near-black + port-light red (nautical signal) */
+  --paper: #faf8f4;
+  --ink: #10141a;
+  --muted: #5a6169;
+  --line: #10141a;
+  --accent: #c81e3a;
+  --accent-ink: #faf8f4;
+  --panel: #f3efe6;
+  --danger: #c81e3a;
+  --ok: #10141a;
+
+  --font-display: var(--font-syne), "Arial Black", sans-serif;
+  --font-body: var(--font-sora), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+}
+
+@theme inline {
+  --color-paper: #faf8f4;
+  --color-ink: #10141a;
+  --color-muted: #5a6169;
+  --color-line: #10141a;
+  --color-accent: #c81e3a;
+  --color-panel: #f3efe6;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+body {
+  background-color: var(--paper);
+  /* Deck planks: quiet horizontal grain */
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 28px,
+    color-mix(in srgb, var(--ink) 5%, transparent) 28px,
+    color-mix(in srgb, var(--ink) 5%, transparent) 29px
+  );
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Waterline rule under chrome */
+.waterline {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0 12%,
+    var(--ink) 12% 100%
+  );
+}
+
+.wm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.wm-btn:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.wm-btn-accent {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.wm-btn-accent:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.wm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wm-input,
+.wm-select,
+.wm-textarea {
+  width: 100%;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.875rem;
+  font-family: var(--font-body);
+}
+
+.wm-input:focus,
+.wm-select:focus,
+.wm-textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.wm-panel {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+
+.wm-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.wm-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+
+.wm-link:hover {
+  color: var(--ink);
+}

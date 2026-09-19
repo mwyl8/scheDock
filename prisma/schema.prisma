@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ReservationKind {
+  VESSEL
+  EVENT
+}
+
+enum ReservationSource {
+  IMPORT
+  APP
+}
+
+enum ImportIssueType {
+  DOUBLE_BOOKING
+  DOES_NOT_FIT
+  UNKNOWN_LENGTH
+  DURATION_UNCERTAIN
+  LENGTH_DISCREPANCY
+  UNPARSED_CELL
+}
+
+enum ImportIssueSeverity {
+  INFO
+  WARNING
+  ERROR
+}
+
+model Berth {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  lengthFt     Int
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+}
+
+model Vessel {
+  id             String        @id @default(cuid())
+  name           String
+  normalizedName String        @unique
+  typePrefix     String?
+  lengthFt       Int?
+  operator       String?
+  contactNotes   String?
+  reservations   Reservation[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Reservation {
+  id        String            @id @default(cuid())
+  berthId   String
+  berth     Berth             @relation(fields: [berthId], references: [id], onDelete: Cascade)
+  kind      ReservationKind
+  vesselId  String?
+  vessel    Vessel?           @relation(fields: [vesselId], references: [id], onDelete: SetNull)
+  eventName String?
+  startDate DateTime          @db.Date
+  endDate   DateTime          @db.Date
+  notes     String?
+  source    ReservationSource
+  createdAt DateTime          @default(now())
+
+  issuesAsA ImportIssue[] @relation("IssueReservationA")
+  issuesAsB ImportIssue[] @relation("IssueReservationB")
+
+  @@index([berthId, startDate, endDate])
+  @@index([vesselId])
+  @@index([source])
+}
+
+model ImportIssue {
+  id              String              @id @default(cuid())
+  type            ImportIssueType
+  severity        ImportIssueSeverity
+  message         String
+  sheet           String?
+  cellRef         String?
+  year            Int?
+  reservationId   String?
+  reservation     Reservation?        @relation("IssueReservationA", fields: [reservationId], references: [id], onDelete: Cascade)
+  reservationBId  String?
+  reservationB    Reservation?        @relation("IssueReservationB", fields: [reservationBId], references: [id], onDelete: Cascade)
+  createdAt       DateTime            @default(now())
+
+  @@index([type])
+  @@index([year])
+}

@@ -1,0 +1,29 @@
+# env
+.env
+.env*.local
+
+# dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Vercel
+.vercel
+
+# Neon project link
+.neon
+
+# OS / editor junk
+.DS_Store
+*.log
+
+# typescript
+next-env.d.ts
+*.tsbuildinfo
+
+# testing
+coverage/
+
+/src/generated/prisma
