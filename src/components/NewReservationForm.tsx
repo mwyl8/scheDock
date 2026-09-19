@@ -6,12 +6,20 @@ import {
   createReservationAction,
   createVesselAction,
   findAvailableBerths,
+  updateVesselLengthAction,
   validateReservationPreview,
 } from "@/lib/actions";
 import { VESSEL_TYPE_PREFIXES } from "@/lib/scheduling";
 
 type Berth = { id: string; name: string; lengthFt: number };
 type Vessel = { id: string; name: string; lengthFt: number | null };
+
+/** Only treat browser date values as real once year is plausible (avoids 0002 while typing). */
+function isCompleteDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const y = Number(s.slice(0, 4));
+  return y >= 1900 && y <= 2100;
+}
 
 export function NewReservationForm({
   berths,
@@ -27,6 +35,7 @@ export function NewReservationForm({
   const [vesselId, setVesselId] = useState("");
   const [vesselQuery, setVesselQuery] = useState("");
   const [vessels, setVessels] = useState(initialVessels);
+  const [loaInput, setLoaInput] = useState("");
   const [eventName, setEventName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -44,14 +53,31 @@ export function NewReservationForm({
   const [newVesselLength, setNewVesselLength] = useState("");
   const [newVesselOperator, setNewVesselOperator] = useState("");
 
+  const selectedVessel = useMemo(
+    () => vessels.find((v) => v.id === vesselId) ?? null,
+    [vessels, vesselId],
+  );
+
+  const loaFt = useMemo(() => {
+    const n = Number(loaInput);
+    return loaInput.trim() && Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+  }, [loaInput]);
+
   const filteredVessels = useMemo(() => {
     const q = vesselQuery.trim().toLowerCase();
     if (!q) return vessels.slice(0, 40);
     return vessels.filter((v) => v.name.toLowerCase().includes(q)).slice(0, 40);
   }, [vessels, vesselQuery]);
 
+  const datesReady = isCompleteDate(startDate) && isCompleteDate(endDate);
+  const canScan = Boolean(vesselId && datesReady && !pending);
+
   useEffect(() => {
-    if (!berthId || !startDate || !endDate) return;
+    if (!berthId || !datesReady) {
+      setFitMessage("");
+      setConflictMessage(null);
+      return;
+    }
     if (kind === "VESSEL" && !vesselId) {
       setFitMessage("Pick a vessel first.");
       setConflictMessage(null);
@@ -62,6 +88,7 @@ export function NewReservationForm({
         berthId,
         kind,
         vesselId,
+        vesselLengthFt: kind === "VESSEL" ? loaFt : null,
         startDate,
         endDate,
       }).then((r) => {
@@ -70,7 +97,21 @@ export function NewReservationForm({
       });
     }, 200);
     return () => clearTimeout(t);
-  }, [berthId, kind, vesselId, startDate, endDate]);
+  }, [berthId, kind, vesselId, startDate, endDate, loaFt, datesReady]);
+
+  function selectVessel(id: string) {
+    setVesselId(id);
+    const v = vessels.find((x) => x.id === id);
+    setLoaInput(v?.lengthFt != null ? String(v.lengthFt) : "");
+  }
+
+  /** After first day is fully set, default last day to the same day if empty / before start. */
+  function syncEndFromStart(nextStart: string) {
+    if (!isCompleteDate(nextStart)) return;
+    if (!isCompleteDate(endDate) || endDate < nextStart) {
+      setEndDate(nextStart);
+    }
+  }
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
@@ -84,26 +125,37 @@ export function NewReservationForm({
         </h1>
         <p className="mt-4 max-w-sm text-sm text-muted">
           We check LOA against the berth and whether another vessel or hold already
-          owns those days, including the historical dock ledger.
+          owns those days, including the historical dock ledger. Missing LOA? Enter
+          it below before you make fast.
         </p>
 
         {kind === "VESSEL" && (
           <div className="mt-8 border-2 border-ink bg-panel p-4 lg:mt-12">
             <h2 className="font-display text-xl font-bold">Open water at the pier</h2>
             <p className="mt-1 text-sm text-muted">
-              Same vessel and dates as the form. Lists floats and faces that fit
+              Needs a vessel, LOA, and both dates. Lists floats and faces that fit
               and are clear.
             </p>
             <button
               type="button"
               className="wm-btn mt-3"
-              disabled={!vesselId || !startDate || !endDate || pending}
+              disabled={!canScan || loaFt == null}
+              title={
+                !vesselId
+                  ? "Pick a vessel first"
+                  : loaFt == null
+                    ? "Enter LOA first"
+                    : !datesReady
+                      ? "Enter complete first and last days"
+                      : undefined
+              }
               onClick={() => {
                 startTransition(async () => {
                   const res = await findAvailableBerths({
                     vesselId,
                     startDate,
                     endDate,
+                    vesselLengthFt: loaFt,
                   });
                   if (!res.ok) setError(res.error);
                   else setAvailable(res.data?.berths ?? []);
@@ -112,6 +164,15 @@ export function NewReservationForm({
             >
               Scan the harbor
             </button>
+            {!canScan && (
+              <p className="mt-2 font-mono text-[11px] text-muted">
+                {!vesselId
+                  ? "Waiting on vessel…"
+                  : !datesReady
+                    ? "Waiting on complete dates…"
+                    : null}
+              </p>
+            )}
             {available && (
               <ul className="mt-3 space-y-2 text-sm">
                 {available.length === 0 ? (
@@ -146,21 +207,36 @@ export function NewReservationForm({
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!isCompleteDate(startDate) || !isCompleteDate(endDate)) {
+            setError("Enter complete first and last days (use the calendar or full YYYY-MM-DD).");
+            return;
+          }
+          if (kind === "VESSEL" && loaFt == null) {
+            setError("Enter this vessel’s LOA in feet before booking.");
+            return;
+          }
           startTransition(async () => {
             const res = await createReservationAction({
               berthId,
               kind,
               vesselId: kind === "VESSEL" ? vesselId : null,
+              vesselLengthFt: kind === "VESSEL" ? loaFt : null,
               eventName: kind === "EVENT" ? eventName : null,
               startDate,
               endDate,
               notes,
             });
             if (!res.ok) setError(res.error);
-            else
+            else {
+              if (kind === "VESSEL" && vesselId && loaFt != null) {
+                setVessels((list) =>
+                  list.map((v) => (v.id === vesselId ? { ...v, lengthFt: loaFt } : v)),
+                );
+              }
               router.push(
                 `/?year=${startDate.slice(0, 4)}&month=${Number(startDate.slice(5, 7))}`,
               );
+            }
           });
         }}
       >
@@ -209,7 +285,7 @@ export function NewReservationForm({
             <select
               required
               value={vesselId}
-              onChange={(e) => setVesselId(e.target.value)}
+              onChange={(e) => selectVessel(e.target.value)}
               className="wm-select font-mono text-sm"
               size={6}
             >
@@ -221,6 +297,64 @@ export function NewReservationForm({
                 </option>
               ))}
             </select>
+
+            {vesselId && (
+              <div className="border-2 border-ink bg-panel p-3">
+                <label className="block">
+                  <span className="wm-label">
+                    LOA (ft)
+                    {selectedVessel?.lengthFt == null
+                      ? " - required for this vessel"
+                      : " - editable"}
+                  </span>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      inputMode="numeric"
+                      required
+                      value={loaInput}
+                      onChange={(e) => setLoaInput(e.target.value)}
+                      placeholder="e.g. 72"
+                      className="wm-input"
+                    />
+                    {selectedVessel?.lengthFt == null ||
+                    (loaFt != null && loaFt !== selectedVessel.lengthFt) ? (
+                      <button
+                        type="button"
+                        className="wm-btn shrink-0"
+                        disabled={pending || loaFt == null}
+                        onClick={() => {
+                          startTransition(async () => {
+                            const res = await updateVesselLengthAction({
+                              vesselId,
+                              lengthFt: loaFt,
+                            });
+                            if (!res.ok) setError(res.error);
+                            else if (res.data) {
+                              setVessels((list) =>
+                                list.map((v) =>
+                                  v.id === vesselId
+                                    ? { ...v, lengthFt: res.data!.lengthFt }
+                                    : v,
+                                ),
+                              );
+                            }
+                          });
+                        }}
+                      >
+                        Save LOA
+                      </button>
+                    ) : null}
+                  </div>
+                </label>
+                <p className="mt-2 text-xs text-muted">
+                  Saved onto the vessel record so future bookings remember it.
+                </p>
+              </div>
+            )}
+
             <button
               type="button"
               className="wm-link text-sm"
@@ -279,6 +413,9 @@ export function NewReservationForm({
                         setVessels((v) => [...v, res.data!]);
                         setVesselId(res.data.id);
                         setVesselQuery(res.data.name);
+                        setLoaInput(
+                          res.data.lengthFt != null ? String(res.data.lengthFt) : "",
+                        );
                         setShowNewVessel(false);
                       }
                     });
@@ -310,9 +447,11 @@ export function NewReservationForm({
               required
               value={startDate}
               onChange={(e) => {
-                setStartDate(e.target.value);
-                if (!endDate) setEndDate(e.target.value);
+                const v = e.target.value;
+                setStartDate(v);
+                // Do NOT copy mid-typing values into last day (that caused year 0002).
               }}
+              onBlur={(e) => syncEndFromStart(e.target.value)}
               className="wm-input"
             />
           </label>
@@ -322,11 +461,17 @@ export function NewReservationForm({
               type="date"
               required
               value={endDate}
+              min={isCompleteDate(startDate) ? startDate : undefined}
               onChange={(e) => setEndDate(e.target.value)}
               className="wm-input"
             />
           </label>
         </div>
+        <p className="font-mono text-[11px] text-muted">
+          Tip: pick dates from the calendar popup, or finish the full date before
+          leaving the first field. Last day defaults to first day when you leave
+          that field.
+        </p>
 
         <label className="block">
           <span className="wm-label">Notes for the dock crew</span>
@@ -340,7 +485,9 @@ export function NewReservationForm({
 
         <div className="border-2 border-ink bg-panel px-3 py-2 text-sm">
           {fitMessage && <p>{fitMessage}</p>}
-          {conflictMessage && <p className="mt-1 font-semibold text-accent">{conflictMessage}</p>}
+          {conflictMessage && (
+            <p className="mt-1 font-semibold text-accent">{conflictMessage}</p>
+          )}
           {!conflictMessage &&
             fitMessage &&
             !fitMessage.toLowerCase().includes("unknown") &&

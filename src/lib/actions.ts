@@ -14,6 +14,7 @@ import {
   createReservationSchema,
   createVesselSchema,
   updateReservationSchema,
+  updateVesselLengthSchema,
 } from "@/lib/validators";
 
 function parseDateOnly(s: string): Date {
@@ -98,6 +99,26 @@ export async function createVesselAction(
   }
 }
 
+export async function updateVesselLengthAction(
+  raw: unknown,
+): Promise<ActionResult<{ id: string; name: string; lengthFt: number }>> {
+  const parsed = updateVesselLengthSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid length" };
+  }
+  const vessel = await prisma.vessel.update({
+    where: { id: parsed.data.vesselId },
+    data: { lengthFt: parsed.data.lengthFt },
+  });
+  revalidatePath("/vessels");
+  revalidatePath("/reservations/new");
+  revalidatePath("/");
+  return {
+    ok: true,
+    data: { id: vessel.id, name: vessel.name, lengthFt: vessel.lengthFt! },
+  };
+}
+
 export async function createReservationAction(
   raw: unknown,
 ): Promise<ActionResult<{ id: string }>> {
@@ -114,7 +135,14 @@ export async function createReservationAction(
 
   let vessel: { lengthFt: number | null; name: string } | null = null;
   if (data.kind === "VESSEL" && data.vesselId) {
-    vessel = await prisma.vessel.findUnique({ where: { id: data.vesselId } });
+    if (data.vesselLengthFt != null) {
+      vessel = await prisma.vessel.update({
+        where: { id: data.vesselId },
+        data: { lengthFt: data.vesselLengthFt },
+      });
+    } else {
+      vessel = await prisma.vessel.findUnique({ where: { id: data.vesselId } });
+    }
     if (!vessel) return { ok: false, error: "Vessel not found." };
   }
 
@@ -246,6 +274,8 @@ export async function validateReservationPreview(raw: {
   berthId: string;
   kind: "VESSEL" | "EVENT";
   vesselId?: string | null;
+  /** Client-entered LOA override (not yet saved). */
+  vesselLengthFt?: number | null;
   startDate: string;
   endDate: string;
   excludeId?: string;
@@ -258,8 +288,8 @@ export async function validateReservationPreview(raw: {
   if (!berth) {
     return { fitMessage: "Select a berth", conflictMessage: null, ok: false };
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(raw.endDate)) {
-    return { fitMessage: "", conflictMessage: "Enter valid dates", ok: false };
+  if (!isCompleteDate(raw.startDate) || !isCompleteDate(raw.endDate)) {
+    return { fitMessage: "", conflictMessage: null, ok: false };
   }
 
   const startDate = parseDateOnly(raw.startDate);
@@ -267,6 +297,9 @@ export async function validateReservationPreview(raw: {
   let vessel: { lengthFt: number | null } | null = null;
   if (raw.kind === "VESSEL" && raw.vesselId) {
     vessel = await prisma.vessel.findUnique({ where: { id: raw.vesselId } });
+    if (vessel && raw.vesselLengthFt != null) {
+      vessel = { ...vessel, lengthFt: raw.vesselLengthFt };
+    }
   }
 
   const existing = await loadExistingForBerth(berth.id, raw.excludeId);
@@ -284,23 +317,38 @@ export async function validateReservationPreview(raw: {
   const fitMessage = fitStatusMessage(raw.kind, vessel, berth);
   return {
     fitMessage,
-    conflictMessage: check.ok ? null : check.message,
+    conflictMessage: check.ok
+      ? null
+      : check.code === "UNKNOWN_LENGTH"
+        ? check.message
+        : check.message,
     ok: check.ok,
   };
+}
+
+function isCompleteDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const y = Number(s.slice(0, 4));
+  return y >= 1900 && y <= 2100;
 }
 
 export async function findAvailableBerths(raw: {
   vesselId: string;
   startDate: string;
   endDate: string;
+  vesselLengthFt?: number | null;
 }): Promise<
   ActionResult<{ berths: { id: string; name: string; lengthFt: number; fitMessage: string }[] }>
 > {
-  if (!raw.vesselId || !raw.startDate || !raw.endDate) {
-    return { ok: false, error: "Vessel and dates are required." };
+  if (!raw.vesselId || !isCompleteDate(raw.startDate) || !isCompleteDate(raw.endDate)) {
+    return { ok: false, error: "Vessel and complete dates are required." };
   }
-  const vessel = await prisma.vessel.findUnique({ where: { id: raw.vesselId } });
-  if (!vessel) return { ok: false, error: "Vessel not found." };
+  const row = await prisma.vessel.findUnique({ where: { id: raw.vesselId } });
+  if (!row) return { ok: false, error: "Vessel not found." };
+  const vessel = {
+    ...row,
+    lengthFt: raw.vesselLengthFt ?? row.lengthFt,
+  };
 
   const startDate = parseDateOnly(raw.startDate);
   const endDate = parseDateOnly(raw.endDate);

@@ -9,6 +9,8 @@ export const createReservationSchema = z
     berthId: z.string().min(1, "Pick a berth"),
     kind: z.enum(["VESSEL", "EVENT"]),
     vesselId: z.string().optional().nullable(),
+    /** Optional LOA to save onto the vessel before booking (fixes missing length). */
+    vesselLengthFt: z.coerce.number().int().positive().optional().nullable(),
     eventName: z.string().optional().nullable(),
     startDate: dateString,
     endDate: dateString,
@@ -30,6 +32,11 @@ export const createReservationSchema = z
       });
     }
   });
+
+export const updateVesselLengthSchema = z.object({
+  vesselId: z.string().min(1),
+  lengthFt: z.coerce.number().int().positive("LOA must be a positive number of feet"),
+});
 
 export const updateReservationSchema = createReservationSchema.extend({
   id: z.string().min(1),
