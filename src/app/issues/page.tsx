@@ -19,32 +19,32 @@ const TYPE_META: Record<
   DOUBLE_BOOKING: {
     label: "Double booking",
     description:
-      "Two imported stays claim the same berth on overlapping days. The old ledger kept both; we surface the clash instead of deleting history.",
+      "In the historical schedule, two bookings overlapped on the same berth for the same days. Both are shown here so that history is visible.",
   },
   DOES_NOT_FIT: {
     label: "Does not fit",
     description:
-      "The vessel’s length is longer than the berth’s maximum. On paper it was booked anyway; in the app this is flagged as a hard misfit.",
+      "In the historical schedule, a boat was listed on a berth shorter than the boat’s length on file.",
   },
   UNKNOWN_LENGTH: {
     label: "Unknown length",
     description:
-      "A vessel stay was imported, but we have no LOA on file for that boat. You can still see the history; set a length before booking it again in the app.",
+      "A historical booking exists for this boat, but no length was recorded for it.",
   },
   DURATION_UNCERTAIN: {
     label: "Duration uncertain",
     description:
-      "The spreadsheet had a single lone cell (not a clear multi-day merge). We treated it as a one-day stay. It might have been longer in real life.",
+      "The historical schedule only clearly marked a single day for this stay, so it was recorded as one day.",
   },
   LENGTH_DISCREPANCY: {
     label: "Length discrepancy",
     description:
-      "The boat’s name included one length (e.g. 72') while a note said a different LOA. We kept the LOA figure and logged the conflict.",
+      "The historical records listed two different lengths for the same boat. The length from the notes was kept.",
   },
   UNPARSED_CELL: {
     label: "Unparsed cell",
     description:
-      "Something in the workbook could not be turned into a clean booking. Rare; worth a look if any show up.",
+      "Part of the historical schedule could not be read as a booking, so nothing was created for it.",
   },
 };
 
@@ -82,7 +82,8 @@ export default async function IssuesPage({ searchParams }: Props) {
   const filters = { type: activeType, year, page };
   const [{ issues, total, pageSize }, counts] = await Promise.all([
     getIssues(filters),
-    getIssueCounts({ type: activeType, year }),
+    // Counts always include every type (year filter only) so chips stay useful
+    getIssueCounts({ year }),
   ]);
   const countTotal = counts.reduce((n, c) => n + c._count, 0);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -98,10 +99,10 @@ export default async function IssuesPage({ searchParams }: Props) {
             Import issues
           </h1>
           <p className="mt-3 max-w-lg text-sm text-muted">
-            When we loaded the old Excel dock schedule, we flagged problems and
-            guesses: overlapping bookings, boats that do not fit a berth, missing
-            lengths, and one-day stays that might have been longer. Filter by type
-            or year, then open the schedule to inspect.
+            These notes come from loading the historical Excel dock schedule.
+            They explain oddities in that history (overlaps, missing lengths, and
+            so on). They are for reference, not a to-do list. Use the filters to
+            browse by type or year.
           </p>
         </div>
         <form className="flex flex-wrap gap-2 lg:justify-end">
@@ -132,8 +133,8 @@ export default async function IssuesPage({ searchParams }: Props) {
 
       <div className="wm-panel p-4">
         <p className="font-mono text-[11px] uppercase tracking-wider text-muted">
-          Counts {activeType || year ? "(filtered)" : "(all)"} · {countTotal}{" "}
-          issues
+          {year ? `Counts for ${year}` : "Counts by type"} · {countTotal} total
+          {activeType ? ` · viewing ${TYPE_META[activeType].label.toLowerCase()} (${total})` : ""}
         </p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {TYPES.map((t) => {
@@ -146,7 +147,7 @@ export default async function IssuesPage({ searchParams }: Props) {
                   className={`inline-block border-2 px-2 py-1 text-xs ${
                     activeType === t
                       ? "border-accent bg-accent text-paper"
-                      : "border-ink hover:bg-ink hover:text-paper"
+                      : "border-ink text-ink hover:bg-ink hover:text-white"
                   }`}
                 >
                   {TYPE_META[t].label} · {n}

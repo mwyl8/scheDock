@@ -56,7 +56,7 @@ export default function RootLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="border-r-2 border-ink px-3 py-3 hover:bg-ink hover:text-paper sm:px-4"
+                  className="border-r-2 border-ink px-3 py-3 text-ink hover:bg-ink hover:text-white sm:px-4"
                 >
                   {item.label}
                 </Link>
