@@ -71,10 +71,24 @@ export async function getVessel(id: string) {
   });
 }
 
+export async function getIssueCounts(filters: { type?: string; year?: number }) {
+  return prisma.importIssue.groupBy({
+    by: ["type"],
+    where: {
+      ...(filters.type ? { type: filters.type as never } : {}),
+      ...(filters.year ? { year: filters.year } : {}),
+    },
+    _count: true,
+    orderBy: { type: "asc" },
+  });
+}
+
 export async function getIssues(filters: {
   type?: string;
   year?: number;
 }) {
+  // ERROR first, then WARNING, then INFO so serious notes aren't buried
+  // under thousands of "lone cell = 1 day" infos.
   return prisma.importIssue.findMany({
     where: {
       ...(filters.type ? { type: filters.type as never } : {}),
@@ -84,7 +98,7 @@ export async function getIssues(filters: {
       reservation: { include: { berth: true, vessel: true } },
       reservationB: { include: { berth: true, vessel: true } },
     },
-    orderBy: [{ severity: "asc" }, { year: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ severity: "desc" }, { year: "desc" }, { createdAt: "desc" }],
     take: 500,
   });
 }
