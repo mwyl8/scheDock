@@ -7,7 +7,6 @@ const TYPES = [
   "UNKNOWN_LENGTH",
   "DURATION_UNCERTAIN",
   "LENGTH_DISCREPANCY",
-  "UNPARSED_CELL",
 ] as const;
 
 type IssueType = (typeof TYPES)[number];
@@ -32,19 +31,14 @@ const TYPE_META: Record<
       "A historical booking exists for this boat, but no length was recorded for it.",
   },
   DURATION_UNCERTAIN: {
-    label: "Duration uncertain",
+    label: "Single-day mark",
     description:
-      "The historical schedule only clearly marked a single day for this stay, so it was recorded as one day.",
+      "This stay is stored as one day because the historical grid only marked a single cell for it, not a multi-day block. The sheet does not say whether the visit was meant to last longer.",
   },
   LENGTH_DISCREPANCY: {
     label: "Length discrepancy",
     description:
       "The historical records listed two different lengths for the same boat. The length from the notes was kept.",
-  },
-  UNPARSED_CELL: {
-    label: "Unparsed cell",
-    description:
-      "Part of the historical schedule could not be read as a booking, so nothing was created for it.",
   },
 };
 
@@ -74,6 +68,9 @@ function typeLabel(type: string): string {
   return type.replaceAll("_", " ").toLowerCase();
 }
 
+/** Hide empty / unused issue kinds from chips and totals. */
+const VISIBLE_TYPES = new Set<string>(TYPES);
+
 export default async function IssuesPage({ searchParams }: Props) {
   const params = await searchParams;
   const year = params.year ? Number(params.year) : undefined;
@@ -85,7 +82,8 @@ export default async function IssuesPage({ searchParams }: Props) {
     // Counts always include every type (year filter only) so chips stay useful
     getIssueCounts({ year }),
   ]);
-  const countTotal = counts.reduce((n, c) => n + c._count, 0);
+  const visibleCounts = counts.filter((c) => VISIBLE_TYPES.has(c.type));
+  const countTotal = visibleCounts.reduce((n, c) => n + c._count, 0);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
@@ -99,10 +97,10 @@ export default async function IssuesPage({ searchParams }: Props) {
             Import issues
           </h1>
           <p className="mt-3 max-w-lg text-sm text-muted">
-            These notes come from loading the historical Excel dock schedule.
-            They explain oddities in that history (overlaps, missing lengths, and
-            so on). They are for reference, not a to-do list. Use the filters to
-            browse by type or year.
+            These notes come from loading the sample Excel dock schedule (synthetic
+            history for this project). They explain oddities in that import
+            (overlaps, missing lengths, single-day marks, and so on). They are for
+            reference, not a to-do list. Use the filters to browse by type or year.
           </p>
         </div>
         <form className="flex flex-wrap gap-2 lg:justify-end">
@@ -138,7 +136,7 @@ export default async function IssuesPage({ searchParams }: Props) {
         </p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {TYPES.map((t) => {
-            const n = counts.find((c) => c.type === t)?._count ?? 0;
+            const n = visibleCounts.find((c) => c.type === t)?._count ?? 0;
             if (!activeType && n === 0) return null;
             return (
               <li key={t}>

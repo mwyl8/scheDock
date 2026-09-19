@@ -410,7 +410,7 @@ function buildReservationsForMonth(
 
       const spanDays = labels.slice(i, j);
       const spanLen = endDay - start.day + 1;
-      // Lone cell (1 day, not from a merge covering >1 day in this month) → uncertain
+      // Lone cell (not a multi-day merge) → store as 1 day; flag as single-day mark
       const mergeSpan =
         start.fromMerge &&
         spanDays.every((d) => d.fromMerge) &&
@@ -667,7 +667,7 @@ async function main() {
       issues.push({
         type: "DURATION_UNCERTAIN",
         severity: "INFO",
-        message: `Lone cell for "${r.displayName}" on ${r.berthName}; treated as 1-day booking.`,
+        message: `Single marked cell for "${r.displayName}" on ${r.berthName}; stored as a 1-day booking.`,
         sheet: r.sheet,
         cellRef: r.cellRef,
         year: r.startDate.getUTCFullYear(),

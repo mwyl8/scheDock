@@ -1,14 +1,14 @@
 # scheDock - Dock Scheduling System
 
-MVP berth scheduler for a marine research facility. Browse historical dock usage (imported from Excel), create new reservations with live conflict/fit checks, and review import data-quality issues.
+MVP berth scheduler for a marine research facility. Browse sample dock history (imported from Excel), create new reservations with live conflict/fit checks, and review import data-quality notes.
 
 ## What it does
 
 - **Schedule grid** - berths as rows, days as columns, month navigation + jump-to-date
 - **Reservations** - vessel or event bookings with validation (overlap, vessel fit, date range)
 - **Vessels** - searchable directory with booking history
-- **Issues** - import QA report (double bookings, misfits, uncertain durations, etc.)
-- **Import** - idempotent loader for `data/dock_schedule.xlsx` (1997-2019)
+- **Import issues** - notes from the Excel load (double bookings, misfits, single-day marks, etc.)
+- **Import** - idempotent loader for `data/dock_schedule.xlsx` (1997-2019 synthetic sample data)
 
 ## Stack
 
@@ -82,11 +82,12 @@ Parser notes are documented in `scripts/import.ts` (month headers, day columns w
 
 1. **Whole-berth occupancy** - one reservation occupies the entire berth for its days (no side-by-side packing by vessel length). Deliberate MVP simplification; see “Next” below.
 2. **Inclusive dates** - `startDate`/`endDate` are calendar dates with no time. A booking ending on day X conflicts with one starting on day X.
-3. **Lone schedule cells** - a single non-merged cell is treated as a **1-day** reservation and logged as `DURATION_UNCERTAIN`.
+3. **Lone schedule cells** - a single non-merged cell is stored as a **1-day** reservation and logged as `DURATION_UNCERTAIN` (“single-day mark”). The sheet does not say whether a longer stay was intended.
 4. **LOA precedence** - if a directory line’s name length conflicts with an `LOA: N'` note, store the LOA and log `LENGTH_DISCREPANCY`.
 5. **Events have no length** - only vessel bookings are checked against berth length.
 6. **Import history is exempt** from the DB exclusion constraint (conflicts are surfaced, not deleted).
 7. **No auth** for this MVP - anyone with the URL can create/edit APP bookings.
+8. **Sample workbook** - `dock_schedule.xlsx` is labeled synthetic sample data; import “history” is for the take-home, not a real marina archive.
 
 ## Known limitations
 

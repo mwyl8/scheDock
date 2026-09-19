@@ -75,7 +75,19 @@ export async function getIssueCounts(filters: { type?: string; year?: number }) 
   return prisma.importIssue.groupBy({
     by: ["type"],
     where: {
-      ...(filters.type ? { type: filters.type as never } : {}),
+      ...(filters.type
+        ? { type: filters.type as never }
+        : {
+            type: {
+              in: [
+                "DOUBLE_BOOKING",
+                "DOES_NOT_FIT",
+                "UNKNOWN_LENGTH",
+                "DURATION_UNCERTAIN",
+                "LENGTH_DISCREPANCY",
+              ],
+            },
+          }),
       ...(filters.year ? { year: filters.year } : {}),
     },
     _count: true,
@@ -92,7 +104,20 @@ export async function getIssues(filters: {
   const pageSize = Math.min(Math.max(filters.pageSize ?? 100, 1), 200);
   const page = Math.max(filters.page ?? 1, 1);
   const where = {
-    ...(filters.type ? { type: filters.type as never } : {}),
+    ...(filters.type
+      ? { type: filters.type as never }
+      : {
+          // Hide unused kinds (e.g. UNPARSED_CELL) from the default list
+          type: {
+            in: [
+              "DOUBLE_BOOKING",
+              "DOES_NOT_FIT",
+              "UNKNOWN_LENGTH",
+              "DURATION_UNCERTAIN",
+              "LENGTH_DISCREPANCY",
+            ],
+          },
+        }),
     ...(filters.year ? { year: filters.year } : {}),
   };
 
