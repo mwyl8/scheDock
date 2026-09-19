@@ -117,24 +117,24 @@ export function NewReservationForm({
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
       <div>
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-          Dock assignment
+          New booking
         </p>
         <h1 className="font-display mt-2 text-4xl font-extrabold leading-none sm:text-5xl">
-          Put a hull
-          <span className="text-accent"> on the pier</span>
+          Reserve a
+          <span className="text-accent"> berth</span>
         </h1>
         <p className="mt-4 max-w-sm text-sm text-muted">
-          We check LOA against the berth and whether another vessel or hold already
-          owns those days, including the historical dock ledger. Missing LOA? Enter
-          it below before you make fast.
+          Pick a berth, a vessel or event, and the date range. We check that the
+          boat fits and that nothing else already has those days - including old
+          imported bookings. If length is missing, enter it before you book.
         </p>
 
         {kind === "VESSEL" && (
           <div className="mt-8 border-2 border-ink bg-panel p-4 lg:mt-12">
-            <h2 className="font-display text-xl font-bold">Open water at the pier</h2>
+            <h2 className="font-display text-xl font-bold">Find open berths</h2>
             <p className="mt-1 text-sm text-muted">
-              Needs a vessel, LOA, and both dates. Lists floats and faces that fit
-              and are clear.
+              Choose a vessel, enter its length, and set both dates. Then we list
+              berths that are long enough and free.
             </p>
             <button
               type="button"
@@ -144,7 +144,7 @@ export function NewReservationForm({
                 !vesselId
                   ? "Pick a vessel first"
                   : loaFt == null
-                    ? "Enter LOA first"
+                    ? "Enter length first"
                     : !datesReady
                       ? "Enter complete first and last days"
                       : undefined
@@ -162,21 +162,21 @@ export function NewReservationForm({
                 });
               }}
             >
-              Scan the harbor
+              Find open berths
             </button>
             {!canScan && (
-              <p className="mt-2 font-mono text-[11px] text-muted">
+              <p className="mt-2 text-xs text-muted">
                 {!vesselId
-                  ? "Waiting on vessel…"
+                  ? "Select a vessel first."
                   : !datesReady
-                    ? "Waiting on complete dates…"
+                    ? "Enter complete start and end dates."
                     : null}
               </p>
             )}
             {available && (
               <ul className="mt-3 space-y-2 text-sm">
                 {available.length === 0 ? (
-                  <li className="text-muted">No clear berth for those dates.</li>
+                  <li className="text-muted">No open berths for those dates.</li>
                 ) : (
                   available.map((b) => (
                     <li
@@ -191,7 +191,7 @@ export function NewReservationForm({
                         className="wm-link text-sm"
                         onClick={() => setBerthId(b.id)}
                       >
-                        Use this
+                        Use this berth
                       </button>
                     </li>
                   ))
@@ -212,7 +212,7 @@ export function NewReservationForm({
             return;
           }
           if (kind === "VESSEL" && loaFt == null) {
-            setError("Enter this vessel’s LOA in feet before booking.");
+            setError("Enter this vessel’s length in feet before booking.");
             return;
           }
           startTransition(async () => {
@@ -250,7 +250,7 @@ export function NewReservationForm({
                 kind === k ? "bg-accent text-paper" : "bg-paper hover:bg-panel"
               }`}
             >
-              {k === "VESSEL" ? "Vessel" : "Event / hold"}
+              {k === "VESSEL" ? "Vessel" : "Event"}
             </button>
           ))}
         </div>
@@ -302,10 +302,10 @@ export function NewReservationForm({
               <div className="border-2 border-ink bg-panel p-3">
                 <label className="block">
                   <span className="wm-label">
-                    LOA (ft)
+                    Length (ft)
                     {selectedVessel?.lengthFt == null
-                      ? " - required for this vessel"
-                      : " - editable"}
+                      ? " - required"
+                      : " - you can update this"}
                   </span>
                   <div className="flex gap-2">
                     <input
@@ -344,13 +344,13 @@ export function NewReservationForm({
                           });
                         }}
                       >
-                        Save LOA
+                        Save length
                       </button>
                     ) : null}
                   </div>
                 </label>
                 <p className="mt-2 text-xs text-muted">
-                  Saved onto the vessel record so future bookings remember it.
+                  Saved on the vessel so you do not have to re-enter it next time.
                 </p>
               </div>
             )}
@@ -360,7 +360,7 @@ export function NewReservationForm({
               className="wm-link text-sm"
               onClick={() => setShowNewVessel((s) => !s)}
             >
-              {showNewVessel ? "Cancel new vessel" : "Vessel isn’t in the list - add it"}
+              {showNewVessel ? "Cancel" : "Add a vessel that is not in the list"}
             </button>
             {showNewVessel && (
               <div className="space-y-2 border-2 border-ink bg-panel p-3">
@@ -428,7 +428,7 @@ export function NewReservationForm({
           </div>
         ) : (
           <label className="block">
-            <span className="wm-label">What is this hold for?</span>
+            <span className="wm-label">Event name</span>
             <input
               required
               value={eventName}
@@ -441,7 +441,7 @@ export function NewReservationForm({
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="wm-label">First day</span>
+            <span className="wm-label">Start date</span>
             <input
               type="date"
               required
@@ -456,7 +456,7 @@ export function NewReservationForm({
             />
           </label>
           <label className="block">
-            <span className="wm-label">Last day</span>
+            <span className="wm-label">End date</span>
             <input
               type="date"
               required
@@ -467,14 +467,14 @@ export function NewReservationForm({
             />
           </label>
         </div>
-        <p className="font-mono text-[11px] text-muted">
-          Tip: pick dates from the calendar popup, or finish the full date before
-          leaving the first field. Last day defaults to first day when you leave
-          that field.
+        <p className="text-xs text-muted">
+          Tip: use the calendar picker, or finish the full start date before leaving
+          that field. End date defaults to the start date when you leave the start
+          field empty.
         </p>
 
         <label className="block">
-          <span className="wm-label">Notes for the dock crew</span>
+          <span className="wm-label">Notes (optional)</span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -493,7 +493,7 @@ export function NewReservationForm({
             !fitMessage.toLowerCase().includes("unknown") &&
             !fitMessage.toLowerCase().includes("too long") &&
             !fitMessage.toLowerCase().includes("pick a vessel") && (
-              <p className="mt-1 font-semibold">Clear - nothing else on that berth.</p>
+              <p className="mt-1 font-semibold">No conflicts on this berth.</p>
             )}
         </div>
 
@@ -502,7 +502,7 @@ export function NewReservationForm({
         )}
 
         <button type="submit" disabled={pending} className="wm-btn wm-btn-accent w-full">
-          {pending ? "Making fast…" : "Make fast"}
+          {pending ? "Saving…" : "Create booking"}
         </button>
       </form>
     </div>

@@ -23,15 +23,15 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "scheDock - Harbor berth board",
-  description: "Berth assignments for Harborview Marine Research Center",
+  title: "scheDock - Dock schedule",
+  description: "Book and review berths at Harborview Marine Research Center",
 };
 
 const NAV = [
-  { href: "/", label: "Tide board" },
-  { href: "/reservations/new", label: "Assign berth" },
-  { href: "/vessels", label: "Fleet" },
-  { href: "/issues", label: "Chart notes" },
+  { href: "/", label: "Schedule" },
+  { href: "/reservations/new", label: "New booking" },
+  { href: "/vessels", label: "Vessels" },
+  { href: "/issues", label: "Import issues" },
 ];
 
 export default function RootLayout({
@@ -64,18 +64,21 @@ export default function RootLayout({
             </nav>
             <div className="hidden items-center gap-2 border-l-2 border-ink px-4 font-mono text-[11px] uppercase tracking-wider text-muted lg:flex">
               <span className="inline-block h-2 w-2 bg-accent" aria-hidden />
-              Harborview · dock ops
+              Harborview Marine Research
             </div>
           </div>
           <div className="waterline" aria-hidden />
         </header>
         <main className="mx-auto max-w-[1500px] px-3 py-6 sm:px-5 sm:py-8">{children}</main>
         <footer className="mx-auto max-w-[1500px] border-t-2 border-ink px-3 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] uppercase tracking-wider text-muted">
-            <span>Whole berth · inclusive dates · no rafting</span>
-            <span className="inline-flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+            <span>
+              One booking fills the whole berth for those days. Dates include the
+              last day.
+            </span>
+            <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider">
               <PierMark className="text-ink" />
-              Pier & float board
+              Dock schedule
             </span>
           </div>
         </footer>

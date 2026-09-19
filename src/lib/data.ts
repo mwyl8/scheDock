@@ -86,19 +86,35 @@ export async function getIssueCounts(filters: { type?: string; year?: number }) 
 export async function getIssues(filters: {
   type?: string;
   year?: number;
+  page?: number;
+  pageSize?: number;
 }) {
-  // ERROR first, then WARNING, then INFO so serious notes aren't buried
-  // under thousands of "lone cell = 1 day" infos.
-  return prisma.importIssue.findMany({
-    where: {
-      ...(filters.type ? { type: filters.type as never } : {}),
-      ...(filters.year ? { year: filters.year } : {}),
-    },
-    include: {
-      reservation: { include: { berth: true, vessel: true } },
-      reservationB: { include: { berth: true, vessel: true } },
-    },
-    orderBy: [{ severity: "desc" }, { year: "desc" }, { createdAt: "desc" }],
-    take: 500,
-  });
+  const pageSize = Math.min(Math.max(filters.pageSize ?? 100, 1), 200);
+  const page = Math.max(filters.page ?? 1, 1);
+  const where = {
+    ...(filters.type ? { type: filters.type as never } : {}),
+    ...(filters.year ? { year: filters.year } : {}),
+  };
+
+  const [issues, total] = await Promise.all([
+    prisma.importIssue.findMany({
+      where,
+      include: {
+        reservation: { include: { berth: true, vessel: true } },
+        reservationB: { include: { berth: true, vessel: true } },
+      },
+      // Chronological: newest years first, then booking start, then type
+      orderBy: [
+        { year: "desc" },
+        { reservation: { startDate: "desc" } },
+        { type: "asc" },
+        { createdAt: "desc" },
+      ],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.importIssue.count({ where }),
+  ]);
+
+  return { issues, total, page, pageSize };
 }

@@ -20,13 +20,15 @@ export default async function VesselDetailPage({ params }: Props) {
         </h1>
         <dl className="mt-6 space-y-3 border-2 border-ink bg-panel p-4 text-sm">
           <div>
-            <dt className="wm-label">Prefix</dt>
+            <dt className="wm-label">Type prefix</dt>
             <dd>{vessel.typePrefix ?? "None on file"}</dd>
           </div>
           <div>
             <dt className="wm-label">Length</dt>
             <dd className="font-mono">
-              {vessel.lengthFt != null ? `${vessel.lengthFt}'` : "Unknown - fix before booking"}
+              {vessel.lengthFt != null
+                ? `${vessel.lengthFt}'`
+                : "Unknown - enter length when booking"}
             </dd>
           </div>
           <div>
@@ -42,9 +44,9 @@ export default async function VesselDetailPage({ params }: Props) {
       </div>
 
       <div>
-        <h2 className="font-display text-2xl font-bold">Past & planned stays</h2>
+        <h2 className="font-display text-2xl font-bold">Booking history</h2>
         {vessel.reservations.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No berth time recorded yet.</p>
+          <p className="mt-3 text-sm text-muted">No bookings yet.</p>
         ) : (
           <ul className="mt-4 border-2 border-ink">
             {vessel.reservations.map((r, i) => (
@@ -66,7 +68,7 @@ export default async function VesselDetailPage({ params }: Props) {
                   href={`/?year=${r.startDate.getUTCFullYear()}&month=${r.startDate.getUTCMonth() + 1}`}
                   className="wm-link"
                 >
-                  Open board
+                  Open on schedule
                 </Link>
               </li>
             ))}

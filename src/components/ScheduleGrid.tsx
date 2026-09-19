@@ -97,26 +97,26 @@ export function ScheduleGrid({
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr] lg:items-end">
         <div className="lg:pr-8 lg:border-r-2 lg:border-ink">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-            Harbor occupancy · one hull per berth
+            Monthly dock schedule
           </p>
           <h1 className="font-display mt-2 text-4xl font-extrabold leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
             {MONTHS[monthIndex]}
             <span className="text-accent"> {year}</span>
           </h1>
           <p className="mt-3 max-w-md text-sm text-muted sm:text-base">
-            Who is alongside which pier or float. Tap a bar for the slip details.
-            Hatched red means a double claim on the same days (kept from the old
-            dock ledger).
+            Each row is a berth. Colored bars are bookings. Click a bar for
+            details. Striped red means two bookings overlap on the same berth
+            (often from the old spreadsheet).
           </p>
         </div>
 
         <div className="flex flex-col gap-2 sm:items-end">
           <div className="flex flex-wrap gap-2 sm:justify-end">
             <button type="button" onClick={prev} className="wm-btn">
-              ← Flood back
+              ← Previous month
             </button>
             <button type="button" onClick={next} className="wm-btn">
-              Tide ahead →
+              Next month →
             </button>
           </div>
           <div className="flex flex-wrap items-stretch gap-2 sm:justify-end">
@@ -128,11 +128,11 @@ export function ScheduleGrid({
               aria-label="Jump to date"
             />
             <button type="button" onClick={onJump} className="wm-btn">
-              Make fast
+              Go to date
             </button>
           </div>
           <Link href="/reservations/new" className="wm-btn wm-btn-accent w-fit sm:self-end">
-            Assign berth
+            New booking
           </Link>
         </div>
       </div>
@@ -145,7 +145,7 @@ export function ScheduleGrid({
           }}
         >
           <div className="sticky left-0 z-10 border-b-2 border-r-2 border-ink bg-panel px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted">
-            Berth / max LOA
+            Berth / max length
           </div>
           {Array.from({ length: days }, (_, i) => (
             <div
@@ -173,12 +173,12 @@ export function ScheduleGrid({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-wide text-muted">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
         <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-3 w-5 bg-accent" /> Hull / vessel
+          <span className="inline-block h-3 w-5 bg-accent" /> Vessel booking
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-3 w-5 bg-ink" /> Event / hold
+          <span className="inline-block h-3 w-5 bg-ink" /> Event or hold
         </span>
         <span className="inline-flex items-center gap-2">
           <span
@@ -188,11 +188,11 @@ export function ScheduleGrid({
                 "repeating-linear-gradient(45deg, #c81e3a, #c81e3a 2px, #faf8f4 2px, #faf8f4 5px)",
             }}
           />{" "}
-          Collision
+          Overlap / conflict
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="inline-block h-3 w-5 border-2 border-dashed border-ink bg-panel" />{" "}
-          Ledger import
+          From spreadsheet import
         </span>
       </div>
 
@@ -356,8 +356,10 @@ function Drawer({
               {reservation.label}
             </h2>
             <p className="mt-1 font-mono text-[11px] uppercase tracking-wide text-muted">
-              {reservation.source === "IMPORT" ? "Workbook import" : "Booked in app"} ·{" "}
-              {reservation.kind === "VESSEL" ? "Vessel" : "Event"}
+              {reservation.source === "IMPORT"
+                ? "From spreadsheet import"
+                : "Created in this app"}{" "}
+              · {reservation.kind === "VESSEL" ? "Vessel" : "Event"}
               {reservation.vesselLengthFt != null
                 ? ` · ${reservation.vesselLengthFt}'`
                 : ""}
@@ -382,10 +384,10 @@ function Drawer({
               <p className="border-2 border-ink bg-panel p-3 text-sm">{reservation.notes}</p>
             )}
             <p className="border-l-4 border-accent pl-3 text-sm text-muted">
-              This came from the Excel history - leave it alone. If something looks
-              wrong, check the{" "}
+              This booking came from the historical Excel import and cannot be
+              edited here. If something looks wrong, see{" "}
               <Link href="/issues" className="wm-link">
-                import mess
+                Import issues
               </Link>
               .
             </p>

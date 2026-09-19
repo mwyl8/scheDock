@@ -9,8 +9,16 @@ type Props = {
 
 export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams;
-  const year = Number(params.year) || 2012;
-  const month = Number(params.month) || 1;
+  // Facility-local "today" (US Eastern) so the board opens on the current month
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "numeric",
+  }).formatToParts(new Date());
+  const todayYear = Number(parts.find((p) => p.type === "year")?.value);
+  const todayMonth = Number(parts.find((p) => p.type === "month")?.value);
+  const year = Number(params.year) || todayYear;
+  const month = Number(params.month) || todayMonth;
   const monthIndex = Math.min(11, Math.max(0, month - 1));
 
   const { berths, reservations, conflictIds } = await getScheduleMonth(year, monthIndex);
