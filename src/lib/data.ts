@@ -1,5 +1,14 @@
+import { ImportIssueType, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { datesOverlap } from "@/lib/scheduling";
+
+const LISTED_ISSUE_TYPES: ImportIssueType[] = [
+  ImportIssueType.DOUBLE_BOOKING,
+  ImportIssueType.DOES_NOT_FIT,
+  ImportIssueType.UNKNOWN_LENGTH,
+  ImportIssueType.DURATION_UNCERTAIN,
+  ImportIssueType.LENGTH_DISCREPANCY,
+];
 
 export async function getBerths() {
   return prisma.berth.findMany({ orderBy: { name: "asc" } });
@@ -72,24 +81,16 @@ export async function getVessel(id: string) {
 }
 
 export async function getIssueCounts(filters: { type?: string; year?: number }) {
+  const where: Prisma.ImportIssueWhereInput = {
+    ...(filters.type
+      ? { type: filters.type as ImportIssueType }
+      : { type: { in: LISTED_ISSUE_TYPES } }),
+    ...(filters.year ? { year: filters.year } : {}),
+  };
+
   return prisma.importIssue.groupBy({
     by: ["type"],
-    where: {
-      ...(filters.type
-        ? { type: filters.type as never }
-        : {
-            type: {
-              in: [
-                "DOUBLE_BOOKING",
-                "DOES_NOT_FIT",
-                "UNKNOWN_LENGTH",
-                "DURATION_UNCERTAIN",
-                "LENGTH_DISCREPANCY",
-              ],
-            },
-          }),
-      ...(filters.year ? { year: filters.year } : {}),
-    },
+    where,
     _count: true,
     orderBy: { type: "asc" },
   });
@@ -103,21 +104,11 @@ export async function getIssues(filters: {
 }) {
   const pageSize = Math.min(Math.max(filters.pageSize ?? 100, 1), 200);
   const page = Math.max(filters.page ?? 1, 1);
-  const where = {
+  // Hide unused kinds (e.g. UNPARSED_CELL) from the default list
+  const where: Prisma.ImportIssueWhereInput = {
     ...(filters.type
-      ? { type: filters.type as never }
-      : {
-          // Hide unused kinds (e.g. UNPARSED_CELL) from the default list
-          type: {
-            in: [
-              "DOUBLE_BOOKING",
-              "DOES_NOT_FIT",
-              "UNKNOWN_LENGTH",
-              "DURATION_UNCERTAIN",
-              "LENGTH_DISCREPANCY",
-            ],
-          },
-        }),
+      ? { type: filters.type as ImportIssueType }
+      : { type: { in: LISTED_ISSUE_TYPES } }),
     ...(filters.year ? { year: filters.year } : {}),
   };
 
