@@ -18,6 +18,7 @@ out/
 # OS / editor junk
 .DS_Store
 *.log
+~$*
 
 # typescript
 next-env.d.ts

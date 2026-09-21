@@ -1,8 +1,18 @@
 import { z } from "zod";
+import { normalizeIsoDate } from "@/lib/dates";
 
+/** Accepts YYYY-MM-DD; clamps overflow days (2025-02-31 → 2025-02-28). */
 export const dateString = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+  .transform((s, ctx) => {
+    const next = normalizeIsoDate(s);
+    if (!next) {
+      ctx.addIssue({ code: "custom", message: "Invalid date" });
+      return z.NEVER;
+    }
+    return next;
+  });
 
 export const createReservationSchema = z
   .object({

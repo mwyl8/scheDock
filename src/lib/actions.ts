@@ -16,11 +16,7 @@ import {
   updateReservationSchema,
   updateVesselLengthSchema,
 } from "@/lib/validators";
-
-function parseDateOnly(s: string): Date {
-  const [y, m, d] = s.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
+import { isCompleteDate, parseDateOnly } from "@/lib/dates";
 
 function reservationLabel(r: {
   kind: string;
@@ -324,12 +320,6 @@ export async function validateReservationPreview(raw: {
         : check.message,
     ok: check.ok,
   };
-}
-
-function isCompleteDate(s: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-  const y = Number(s.slice(0, 4));
-  return y >= 1900 && y <= 2100;
 }
 
 export async function findAvailableBerths(raw: {

@@ -7,6 +7,8 @@ import {
   deleteReservationAction,
   updateReservationAction,
 } from "@/lib/actions";
+import { DateField } from "@/components/DateField";
+import { isCompleteDate, normalizeDateInput } from "@/lib/dates";
 
 export type ScheduleReservation = {
   id: string;
@@ -86,9 +88,10 @@ export function ScheduleGrid({
   };
 
   const onJump = () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(jump)) return;
-    const [y, m] = jump.split("-").map(Number);
-    router.push(`/?year=${y}&month=${m}&focus=${jump}`);
+    const iso = isCompleteDate(jump) ? jump : normalizeDateInput(jump);
+    if (!iso) return;
+    const [y, m] = iso.split("-").map(Number);
+    router.push(`/?year=${y}&month=${m}&focus=${iso}`);
   };
 
   return (
@@ -119,15 +122,16 @@ export function ScheduleGrid({
               Next month →
             </button>
           </div>
-          <div className="flex flex-wrap items-stretch gap-2 sm:justify-end">
-            <input
-              type="date"
-              value={jump}
-              onChange={(e) => setJump(e.target.value)}
-              className="wm-input w-auto min-w-[10rem]"
-              aria-label="Jump to date"
-            />
-            <button type="button" onClick={onJump} className="wm-btn">
+          <div className="flex flex-wrap items-end gap-2 sm:justify-end">
+            <div className="min-w-[10rem]">
+              <DateField
+                label="Jump to date"
+                value={jump}
+                onChange={setJump}
+                id="schedule-jump"
+              />
+            </div>
+            <button type="button" onClick={onJump} className="wm-btn mb-0 self-end">
               Go to date
             </button>
           </div>
@@ -434,24 +438,19 @@ function Drawer({
               </label>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="wm-label">Start</span>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="wm-input"
-                />
-              </label>
-              <label className="block">
-                <span className="wm-label">End</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="wm-input"
-                />
-              </label>
+              <DateField
+                label="Start"
+                value={startDate}
+                onChange={setStartDate}
+                required
+              />
+              <DateField
+                label="End"
+                value={endDate}
+                onChange={setEndDate}
+                min={isCompleteDate(startDate) ? startDate : undefined}
+                required
+              />
             </div>
             <label className="block">
               <span className="wm-label">Notes</span>

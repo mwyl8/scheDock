@@ -9,17 +9,12 @@ import {
   updateVesselLengthAction,
   validateReservationPreview,
 } from "@/lib/actions";
+import { DateField } from "@/components/DateField";
+import { isCompleteDate } from "@/lib/dates";
 import { VESSEL_TYPE_PREFIXES } from "@/lib/scheduling";
 
 type Berth = { id: string; name: string; lengthFt: number };
 type Vessel = { id: string; name: string; lengthFt: number | null };
-
-/** Only treat browser date values as real once year is plausible (avoids 0002 while typing). */
-function isCompleteDate(s: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-  const y = Number(s.slice(0, 4));
-  return y >= 1900 && y <= 2100;
-}
 
 export function NewReservationForm({
   berths,
@@ -440,37 +435,25 @@ export function NewReservationForm({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="wm-label">Start date</span>
-            <input
-              type="date"
-              required
-              value={startDate}
-              onChange={(e) => {
-                const v = e.target.value;
-                setStartDate(v);
-                // Do NOT copy mid-typing values into last day (that caused year 0002).
-              }}
-              onBlur={(e) => syncEndFromStart(e.target.value)}
-              className="wm-input"
-            />
-          </label>
-          <label className="block">
-            <span className="wm-label">End date</span>
-            <input
-              type="date"
-              required
-              value={endDate}
-              min={isCompleteDate(startDate) ? startDate : undefined}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="wm-input"
-            />
-          </label>
+          <DateField
+            label="Start date"
+            required
+            value={startDate}
+            onChange={setStartDate}
+            onNormalized={syncEndFromStart}
+          />
+          <DateField
+            label="End date"
+            required
+            value={endDate}
+            onChange={setEndDate}
+            min={isCompleteDate(startDate) ? startDate : undefined}
+          />
         </div>
         <p className="text-xs text-muted">
-          Tip: use the calendar picker, or finish the full start date before leaving
-          that field. End date defaults to the start date when you leave the start
-          field empty.
+          Type dates as M/D/YYYY. Impossible days are corrected (2/31 becomes
+          2/28 or 2/29). End date defaults to the start date when you leave the
+          start field.
         </p>
 
         <label className="block">

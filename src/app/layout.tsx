@@ -76,9 +76,9 @@ export default function RootLayout({
               One booking fills the whole berth for those days. Dates include the
               last day.
             </span>
-            <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider">
+            <span className="inline-flex items-center gap-2 font-display text-sm font-bold tracking-tight text-ink">
               <PierMark className="text-ink" />
-              Dock schedule
+              scheDock
             </span>
           </div>
         </footer>
