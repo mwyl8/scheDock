@@ -18,27 +18,27 @@ const TYPE_META: Record<
   DOUBLE_BOOKING: {
     label: "Double booking",
     description:
-      "In the historical schedule, two bookings overlapped on the same berth for the same days. Both are shown here so that history is visible.",
+      "Two stays were recorded on the same berth for overlapping days. Both are kept here so the old conflict is still visible.",
   },
   DOES_NOT_FIT: {
     label: "Does not fit",
     description:
-      "In the historical schedule, a boat was listed on a berth shorter than the boat’s length on file.",
+      "A boat was assigned to a berth shorter than the length on file for that vessel.",
   },
   UNKNOWN_LENGTH: {
     label: "Unknown length",
     description:
-      "A historical booking exists for this boat, but no length was recorded for it.",
+      "A stay was recorded for a boat that had no length on file, so fit could not be checked.",
   },
   DURATION_UNCERTAIN: {
     label: "Single-day mark",
     description:
-      "This stay is stored as one day because the historical grid only marked a single cell for it, not a multi-day block. The sheet does not say whether the visit was meant to last longer.",
+      "Only one day was marked for this stay, so it is stored as a single day. Older records do not say whether a longer visit was intended.",
   },
   LENGTH_DISCREPANCY: {
     label: "Length discrepancy",
     description:
-      "The historical records listed two different lengths for the same boat. The length from the notes was kept.",
+      "Older records listed two different lengths for the same boat. The clearer notes value was kept.",
   },
 };
 
@@ -91,16 +91,16 @@ export default async function IssuesPage({ searchParams }: Props) {
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-            Data quality
+            History
           </p>
           <h1 className="font-display mt-2 text-4xl font-extrabold leading-none sm:text-5xl">
-            Import issues
+            Issue log
           </h1>
           <p className="mt-3 max-w-lg text-sm text-muted">
-            These notes come from loading the sample Excel dock schedule (synthetic
-            history for this project). They explain oddities in that import
-            (overlaps, missing lengths, single-day marks, and so on). They are for
-            reference, not a to-do list. Use the filters to browse by type or year.
+            A record of what went wrong in older dock bookings—overlapping stays,
+            missing lengths, unclear visit lengths, and conflicting vessel data.
+            New bookings are checked up front so these mistakes are harder to
+            repeat. Filter by type or year to browse the log.
           </p>
         </div>
         <form className="flex flex-wrap gap-2 lg:justify-end">
@@ -179,8 +179,8 @@ export default async function IssuesPage({ searchParams }: Props) {
 
       {issues.length === 0 ? (
         <div className="wm-panel p-8 text-sm text-muted">
-          No issues for this filter. Either the import is clean here, or you
-          filtered too hard.
+          Nothing in the log for this filter. Try another type or year, or clear
+          the filters.
         </div>
       ) : (
         <>

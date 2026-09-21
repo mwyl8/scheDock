@@ -31,7 +31,7 @@ const NAV = [
   { href: "/", label: "Schedule" },
   { href: "/reservations/new", label: "New booking" },
   { href: "/vessels", label: "Vessels" },
-  { href: "/issues", label: "Import issues" },
+  { href: "/issues", label: "Issue log" },
 ];
 
 export default function RootLayout({

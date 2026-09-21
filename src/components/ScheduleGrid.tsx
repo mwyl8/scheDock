@@ -109,7 +109,7 @@ export function ScheduleGrid({
           <p className="mt-3 max-w-md text-sm text-muted sm:text-base">
             Each row is a berth. Colored bars are bookings. Click a bar for
             details. Striped red means two bookings overlap on the same berth
-            (often from the old spreadsheet).
+            (often from older records).
           </p>
         </div>
 
@@ -196,7 +196,7 @@ export function ScheduleGrid({
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="inline-block h-3 w-5 border-2 border-dashed border-ink bg-panel" />{" "}
-          From spreadsheet import
+          From past records
         </span>
       </div>
 
@@ -361,7 +361,7 @@ function Drawer({
             </h2>
             <p className="mt-1 font-mono text-[11px] uppercase tracking-wide text-muted">
               {reservation.source === "IMPORT"
-                ? "From spreadsheet import"
+                ? "From past records"
                 : "Created in this app"}{" "}
               · {reservation.kind === "VESSEL" ? "Vessel" : "Event"}
               {reservation.vesselLengthFt != null
@@ -388,10 +388,10 @@ function Drawer({
               <p className="border-2 border-ink bg-panel p-3 text-sm">{reservation.notes}</p>
             )}
             <p className="border-l-4 border-accent pl-3 text-sm text-muted">
-              This booking came from the historical Excel import and cannot be
-              edited here. If something looks wrong, see{" "}
+              This is an older historical booking and cannot be edited here. If
+              something looks wrong, see the{" "}
               <Link href="/issues" className="wm-link">
-                Import issues
+                Issue log
               </Link>
               .
             </p>
