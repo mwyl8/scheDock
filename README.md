@@ -18,6 +18,52 @@ Dock scheduling for a marine research facility: month grid by berth, vessel dire
 
 Next.js (App Router) · TypeScript · Tailwind CSS · Prisma · Neon Postgres · Zod · Vitest · ExcelJS · Vercel
 
+## Architecture
+
+```mermaid
+flowchart TB
+  subgraph Client["Browser"]
+    UI["App Router pages<br/>Schedule · New booking · Vessels · Issue log"]
+  end
+
+  subgraph Vercel["Vercel · Next.js"]
+    RSC["Server Components<br/>src/app · src/lib/data.ts"]
+    Actions["Server Actions<br/>src/lib/actions.ts"]
+    Zod["Zod validators"]
+    Rules["Pure domain rules<br/>src/lib/scheduling.ts"]
+    Prisma["Prisma Client"]
+  end
+
+  subgraph Data["Neon Postgres"]
+    Tables["Berth · Vessel · Reservation · ImportIssue"]
+    Exclude["Exclusion constraint<br/>APP bookings only"]
+  end
+
+  subgraph Offline["Local / CI"]
+    XLSX["data/dock_schedule.xlsx"]
+    Import["scripts/import.ts<br/>ExcelJS"]
+    Seed["prisma/seed.ts"]
+    Tests["Vitest<br/>scheduling · dates"]
+  end
+
+  UI --> RSC
+  UI --> Actions
+  Actions --> Zod --> Rules
+  Actions --> Prisma
+  RSC --> Prisma
+  Rules -.->|"overlap · fit · dates"| Actions
+  Prisma --> Tables
+  Tables --- Exclude
+
+  XLSX --> Import --> Prisma
+  Seed --> Prisma
+  Tests --> Rules
+```
+
+**Request path:** UI → Server Components (read) or Server Actions (write) → Zod + scheduling rules → Prisma → Neon.
+
+**Two booking sources:** `APP` (created in the UI; blocked by app rules **and** the DB exclusion constraint) vs `IMPORT` (loaded from the sample workbook; overlaps kept and listed in the Issue log).
+
 ## Local setup
 
 1. Copy env and fill in Neon URLs:
