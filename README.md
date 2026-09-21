@@ -21,42 +21,41 @@ Next.js (App Router) · TypeScript · Tailwind CSS · Prisma · Neon Postgres ·
 ## Architecture
 
 ```mermaid
-flowchart TB
-  subgraph Client["Browser"]
-    UI["App Router pages<br/>Schedule · New booking · Vessels · Issue log"]
+graph TB
+  subgraph browser [Browser]
+    UI[App pages: Schedule, Bookings, Vessels, Issue log]
   end
 
-  subgraph Vercel["Vercel · Next.js"]
-    RSC["Server Components<br/>src/app · src/lib/data.ts"]
-    Actions["Server Actions<br/>src/lib/actions.ts"]
-    Zod["Zod validators"]
-    Rules["Pure domain rules<br/>src/lib/scheduling.ts"]
-    Prisma["Prisma Client"]
+  subgraph nextjs [Vercel / Next.js]
+    RSC[Server Components + data.ts]
+    SA[Server Actions + Zod]
+    Rules[scheduling.ts domain rules]
+    ORM[Prisma Client]
   end
 
-  subgraph Data["Neon Postgres"]
-    Tables["Berth · Vessel · Reservation · ImportIssue"]
-    Exclude["Exclusion constraint<br/>APP bookings only"]
+  subgraph neon [Neon Postgres]
+    DB[(Berth Vessel Reservation ImportIssue)]
+    EX[Exclusion constraint on APP only]
   end
 
-  subgraph Offline["Local / CI"]
-    XLSX["data/dock_schedule.xlsx"]
-    Import["scripts/import.ts<br/>ExcelJS"]
-    Seed["prisma/seed.ts"]
-    Tests["Vitest<br/>scheduling · dates"]
+  subgraph local [Local / CI]
+    XLSX[dock_schedule.xlsx]
+    Imp[import.ts]
+    Seed[seed.ts]
+    Tests[Vitest]
   end
 
   UI --> RSC
-  UI --> Actions
-  Actions --> Zod --> Rules
-  Actions --> Prisma
-  RSC --> Prisma
-  Rules -.->|"overlap · fit · dates"| Actions
-  Prisma --> Tables
-  Tables --- Exclude
+  UI --> SA
+  SA --> Rules
+  SA --> ORM
+  RSC --> ORM
+  ORM --> DB
+  DB --- EX
 
-  XLSX --> Import --> Prisma
-  Seed --> Prisma
+  XLSX --> Imp
+  Imp --> ORM
+  Seed --> ORM
   Tests --> Rules
 ```
 
