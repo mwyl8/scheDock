@@ -1,31 +1,39 @@
-# scheDock - Dock Scheduling System
+# scheDock
 
-MVP berth scheduler for a marine research facility. Browse sample dock history (imported from Excel), create new reservations with live conflict/fit checks, and review import data-quality notes.
+Dock scheduling for a marine research facility: month grid by berth, vessel directory, conflict/fit checks on new bookings, and a log of problems found in older schedule history.
 
-## What it does
+**Live demo:** [sche-dock-opal.vercel.app](https://sche-dock-opal.vercel.app)
 
-- **Schedule grid** - berths as rows, days as columns, month navigation + jump-to-date
-- **Reservations** - vessel or event bookings with validation (overlap, vessel fit, date range)
-- **Vessels** - searchable directory with booking history
-- **Import issues** - notes from the Excel load (double bookings, misfits, single-day marks, etc.)
-- **Import** - idempotent loader for `data/dock_schedule.xlsx` (1997-2019 synthetic sample data)
+> The demo has **no auth** — treat it as a shared sandbox. Prefer creating a short test booking rather than deleting others’ data.
+
+## Demo tour
+
+1. **Schedule** — jump to a month in **2019** (sample history is 1997–2019; “today” may look empty).
+2. Click a colored bar — past-record bookings are read-only; app bookings can be edited.
+3. **New booking** — pick a vessel, enter length if needed, set dates (`M/D/YYYY`; impossible days clamp, e.g. 2/31 → 2/28).
+4. **Issue log** — overlaps, missing lengths, single-day marks, and other problems from older records. New bookings are checked up front so these are harder to repeat.
+5. **Vessels** — search the directory and open a vessel’s recent stays.
 
 ## Stack
 
-Next.js (App Router, TypeScript), Tailwind CSS, Prisma, Neon Postgres, Zod, Vitest, ExcelJS. Deploy target: Vercel.
+Next.js (App Router) · TypeScript · Tailwind CSS · Prisma · Neon Postgres · Zod · Vitest · ExcelJS · Vercel
 
 ## Local setup
 
-1. **Env vars** - ensure `.env` (or `.env.local`) has:
+1. Copy env and fill in Neon URLs:
 
    ```bash
-   DATABASE_URL="postgresql://…?sslmode=require"   # pooled (Neon)
-   DIRECT_URL="postgresql://…?sslmode=require"     # non-pooled / direct
+   cp .env.example .env
    ```
 
-   If your Neon dashboard only exposes `DATABASE_URL_UNPOOLED`, map that value to `DIRECT_URL`.
+   | Variable | Use |
+   |----------|-----|
+   | `DATABASE_URL` | Pooled connection string |
+   | `DIRECT_URL` | Direct / non-pooled (migrations) |
 
-2. **Install & migrate**
+   If Neon only shows `DATABASE_URL_UNPOOLED`, put that value in `DIRECT_URL`.
+
+2. Install, migrate, seed berths:
 
    ```bash
    npm install
@@ -33,92 +41,72 @@ Next.js (App Router, TypeScript), Tailwind CSS, Prisma, Neon Postgres, Zod, Vite
    npm run db:seed
    ```
 
-3. **Import history** (optional but recommended)
+3. Load sample history (recommended):
 
    ```bash
    npm run import
    ```
 
-4. **Run**
+   Reads `data/dock_schedule.xlsx` (synthetic 1997–2019 workbook). Idempotent: replaces IMPORT reservations and issue-log rows.
+
+4. Run:
 
    ```bash
    npm run dev
    ```
 
-5. **Tests / build**
+5. Tests / production build:
 
    ```bash
    npm test
    npm run build
    ```
 
-## Import
-
-`npm run import` reads `data/dock_schedule.xlsx` with ExcelJS:
-
-- Year sheets `1997`…`2019` → reservations
-- `Science` / `Yachts` → vessel directory (length, operator, contacts)
-- Ignores `8YR Dock Summary` and `Tours`
-- Idempotent: wipes IMPORT reservations + ImportIssues (and orphan vessels), then reloads
-
-Parser notes are documented in `scripts/import.ts` (month headers, day columns without formula evaluation, merges, cross-month continuations, LOA vs name-length discrepancies).
-
-## Architecture
+## Project layout
 
 | Area | Location |
 |------|----------|
 | Domain rules (pure) | `src/lib/scheduling.ts` |
-| Unit tests | `src/lib/scheduling.test.ts` |
+| Unit tests | `src/lib/scheduling.test.ts`, `src/lib/dates.test.ts` |
 | Zod schemas | `src/lib/validators.ts` |
 | Server actions | `src/lib/actions.ts` |
 | Data loaders | `src/lib/data.ts` |
 | Prisma schema | `prisma/schema.prisma` |
-| Import CLI | `scripts/import.ts` |
+| History loader CLI | `scripts/import.ts` |
 | UI | `src/app/*`, `src/components/*` |
 
-**APP bookings** are validated in application code (friendly conflict messages) **and** at the DB with a Postgres exclusion constraint (`btree_gist` + inclusive `daterange`) that applies only where `source = 'APP'`. Imported history is exempt so real conflicts remain visible as issues.
+**APP bookings** are validated in app code and at the DB with a Postgres exclusion constraint (`btree_gist` + inclusive `daterange`) that applies only where `source = 'APP'`. Past-record (`IMPORT`) overlaps stay visible in the schedule and Issue log instead of being rejected by the constraint.
 
-## Assumptions
+## Design decisions
 
-1. **Whole-berth occupancy** - one reservation occupies the entire berth for its days (no side-by-side packing by vessel length). Deliberate MVP simplification; see “Next” below.
-2. **Inclusive dates** - `startDate`/`endDate` are calendar dates with no time. A booking ending on day X conflicts with one starting on day X.
-3. **Lone schedule cells** - a single non-merged cell is stored as a **1-day** reservation and logged as `DURATION_UNCERTAIN` (“single-day mark”). The sheet does not say whether a longer stay was intended.
-4. **LOA precedence** - if a directory line’s name length conflicts with an `LOA: N'` note, store the LOA and log `LENGTH_DISCREPANCY`.
-5. **Events have no length** - only vessel bookings are checked against berth length.
-6. **Import history is exempt** from the DB exclusion constraint (conflicts are surfaced, not deleted).
-7. **No auth** for this MVP - anyone with the URL can create/edit APP bookings.
-8. **Sample workbook** - `dock_schedule.xlsx` is labeled synthetic sample data; import “history” is for the take-home, not a real marina archive.
+1. **Whole-berth occupancy** — one reservation fills the berth for its days (no side-by-side packing by length).
+2. **Inclusive dates** — a stay ending on day X conflicts with one starting on day X.
+3. **Single-day marks** — a lone day in older grids is stored as one day and noted in the Issue log; records may not say if a longer stay was meant.
+4. **LOA precedence** — if name length and an `LOA: N'` note disagree, keep LOA and log a discrepancy.
+5. **Events** — no length check; vessels must fit the berth.
+6. **No auth** in this MVP.
 
 ## Known limitations
 
-- Import day-column alignment follows “column of literal `1` + offset”; some workbook months have odd layouts (e.g. stray month headers) and may skip or clamp days.
-- Many imported vessels lack length → many `UNKNOWN_LENGTH` issues until directory data is completed.
-- Schedule grid loads one month at a time; very dense months can feel busy on small screens.
-- No audit log, roles, or CSV export yet.
+- Sample history ends in 2019; opening the current month can look empty until you jump back.
+- Many vessels lack length → many “unknown length” log entries.
+- Month grid can feel dense on small screens.
+- No roles, audit log, or export yet.
 
 ## What I’d do next
 
-- Auth / roles (dock ops vs read-only science staff)
+- Auth / roles (dock ops vs read-only)
 - Side-by-side berth packing by remaining length
-- Draft / beam (and maybe depth) constraints
+- Draft / beam constraints
 - Recurring events and multi-berth holds
-- Audit log of create/update/delete
-- CSV / iCal export
-- Faster import via `createMany` + bulk issue insert
+- Audit log and CSV / iCal export
 
-## Vercel env vars
+## Deploy (Vercel)
 
-Set these in the Vercel project (Settings → Environment Variables):
-
-| Name | Value |
-|------|--------|
-| `DATABASE_URL` | Neon **pooled** connection string |
-| `DIRECT_URL` | Neon **direct / non-pooled** connection string |
-
-Also run migrations on deploy (e.g. `prisma migrate deploy` in a build command or release step):
+Set `DATABASE_URL` and `DIRECT_URL` in the project env. Build runs migrate + Next build via `vercel.json`:
 
 ```bash
 prisma generate && prisma migrate deploy && next build
 ```
 
-(The repo `npm run build` already runs `prisma generate && next build`; add `migrate deploy` in CI/CD as appropriate.)
+After the first deploy, run `npm run import` once against production credentials if you want the sample history on the live site.
